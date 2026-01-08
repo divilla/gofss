@@ -1,7 +1,6 @@
 package gofss
 
 import (
-	"errors"
 	"io"
 	"log/slog"
 	"os"
@@ -66,25 +65,23 @@ func (h *SessionHandler) Open(id string, data []byte) error {
 	defer h.mu.Unlock()
 
 	dirPath := filepath.Join(h.savePath, id[0:2])
-	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-		err = os.Mkdir(dirPath, 0755)
-		if err != nil {
-			slog.Error("make session dir: '%s' error: %w", dirPath, err)
-			return err
-		}
+	exists, err := pathExists(dirPath)
+	if err != nil {
+		panic(err)
 	}
-	if _, err := os.Stat(dirPath); err != nil {
-		slog.Error("open session dir: '%s' error: %w", dirPath, err)
-		return err
+	if !exists {
+		if err = os.Mkdir(dirPath, 0755); err != nil {
+			slog.Error("make session dir: '%s' error: %w", dirPath, err)
+			panic(err)
+		}
 	}
 
 	filePath := filepath.Join(dirPath, id)
-	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
-		err = errors.New("file already exists")
-		slog.Error("session file: '%s' error: %w", filePath, err)
-		return err
+	exists, err = pathExists(filePath)
+	if err != nil {
+		panic(err)
 	}
-	if err := os.WriteFile(filePath, data, 0644); err != nil {
+	if err = os.WriteFile(filePath, data, 0644); err != nil {
 		slog.Error("write session file: '%s' error: %w", filePath, err)
 		return err
 	}
@@ -131,4 +128,17 @@ func (h *SessionHandler) Destroy(id string) error {
 	}
 
 	return nil
+}
+
+func pathExists(path string) (bool, error) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return false, nil
+	}
+
+	if _, err := os.Stat(path); err != nil {
+		slog.Error("open session dir: '%s' error: %w", path, err)
+		return false, err
+	}
+
+	return true, nil
 }
