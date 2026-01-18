@@ -17,9 +17,14 @@ var (
 )
 
 func BenchmarkSetup(b *testing.B) {
+	var err error
+
 	config := NewSessionStoreConfig()
 	config.ExpireInterval = time.Minute
-	ss, _ = NewSessionStore(config)
+	ss, err = NewSessionStore(config)
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	for i := 0; i < 10; i++ {
 		data = append(data, []byte(URL64)...)
@@ -98,7 +103,7 @@ func BenchmarkSessionDelete(b *testing.B) {
 	var wg sync.WaitGroup
 	for n := 0; n < b.N; n++ {
 		if int(atomic.LoadInt64(&deleteCounter)) >= len(ids) {
-			atomic.StoreInt64(&deleteCounter, 0)
+			break
 		}
 
 		wg.Add(1)
@@ -118,7 +123,7 @@ func BenchmarkSessionDelete(b *testing.B) {
 
 func BenchmarkClean(b *testing.B) {
 	b.SkipNow()
-	_ = ss.PurgeExpired()
+	_ = ss.Purge()
 }
 
 func BenchmarkCleanup(b *testing.B) {

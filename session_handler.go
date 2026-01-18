@@ -19,10 +19,10 @@ type (
 	}
 )
 
-func newSessionHandler(config *SessionStoreConfig) *sessionHandler {
+func newSessionHandler(cfg SessionStoreConfig) *sessionHandler {
 	return &sessionHandler{
-		savePath:       config.SavePath,
-		expireInterval: config.ExpireInterval,
+		savePath:       cfg.SavePath,
+		expireInterval: cfg.ExpireInterval,
 	}
 }
 
@@ -113,7 +113,7 @@ func (h *sessionHandler) timestamp(id string) (*time.Time, error) {
 	return &unixTime, nil
 }
 
-func (h *sessionHandler) purgeExpired(prefix string) error {
+func (h *sessionHandler) purge(prefix string) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
