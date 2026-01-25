@@ -69,12 +69,32 @@ func NewSessionStore(cfg SessionStoreConfig) (*SessionStore, error) {
 	return app, nil
 }
 
+func (a *SessionStore) SID() string {
+	var word string
+
+	for i := 0; i < a.cryptoStrength; i++ {
+		nBig, err := rand.Int(rand.Reader, big.NewInt(rndSize))
+		if err != nil {
+			panic(err)
+		}
+		n := nBig.Int64()
+
+		for j := 0; j < 10; j++ {
+			m := n % 64
+			word += URL64[m : m+1]
+			n = n / 64
+		}
+	}
+
+	return word
+}
+
 func (a *SessionStore) Create(data []byte) string {
 	var id string
 	err := errors.New("dummy")
 
 	for err != nil {
-		id = a.newName()
+		id = a.SID()
 		err = a.getHandler(id).create(id, data)
 	}
 
@@ -132,24 +152,4 @@ func (a *SessionStore) purgeGoroutine() {
 
 func (a *SessionStore) getHandler(id string) *sessionHandler {
 	return a.handlerMap[id[0:1]]
-}
-
-func (a *SessionStore) newName() string {
-	var word string
-
-	for i := 0; i < a.cryptoStrength; i++ {
-		nBig, err := rand.Int(rand.Reader, big.NewInt(rndSize))
-		if err != nil {
-			panic(err)
-		}
-		n := nBig.Int64()
-
-		for j := 0; j < 10; j++ {
-			m := n % 64
-			word += URL64[m : m+1]
-			n = n / 64
-		}
-	}
-
-	return word
 }
