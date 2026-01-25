@@ -87,7 +87,7 @@ func BenchmarkSessionUpdate(b *testing.B) {
 		wg.Add(1)
 		go func(j int) {
 			defer wg.Done()
-			err := ss.Update(ids[j], data)
+			err := ss.Write(ids[j], data)
 			if err != nil {
 				b.Error(err)
 			}

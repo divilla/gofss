@@ -19,14 +19,14 @@ var (
 
 type (
 	SessionStore struct {
-		handlerMap    map[string]*sessionHandler
-		idSize        int
-		purgeInterval time.Duration
+		handlerMap     map[string]*sessionHandler
+		cryptoStrength int
+		purgeInterval  time.Duration
 	}
 
 	SessionStoreConfig struct {
 		SavePath       string
-		IDSize         int
+		CryptoStrength int
 		ExpireInterval time.Duration
 		PurgeInterval  time.Duration
 	}
@@ -36,9 +36,9 @@ func NewSessionStoreConfig() SessionStoreConfig {
 	workDir, _ := os.Getwd()
 	return SessionStoreConfig{
 		SavePath:       filepath.Join(workDir, "sessions"),
-		IDSize:         8,
-		ExpireInterval: time.Hour * 24 * 365,
-		PurgeInterval:  time.Hour * 24,
+		CryptoStrength: 8,
+		ExpireInterval: 365 * 24 * time.Hour,
+		PurgeInterval:  24 * time.Hour,
 	}
 }
 
@@ -56,9 +56,9 @@ func NewSessionStore(cfg SessionStoreConfig) (*SessionStore, error) {
 	}
 
 	app := &SessionStore{
-		handlerMap:    make(map[string]*sessionHandler),
-		idSize:        cfg.IDSize,
-		purgeInterval: cfg.PurgeInterval,
+		handlerMap:     make(map[string]*sessionHandler),
+		cryptoStrength: cfg.CryptoStrength,
+		purgeInterval:  cfg.PurgeInterval,
 	}
 	for i := 0; i < len(URL64); i++ {
 		app.handlerMap[URL64[i:i+1]] = newSessionHandler(cfg)
@@ -74,23 +74,23 @@ func (a *SessionStore) Create(data []byte) string {
 	err := errors.New("dummy")
 
 	for err != nil {
-		id = a.newId()
+		id = a.newName()
 		err = a.getHandler(id).create(id, data)
 	}
 
 	return id
 }
 
-func (a *SessionStore) Update(id string, data []byte) error {
-	return a.getHandler(id).update(id, data)
+func (a *SessionStore) Read(id string) ([]byte, error) {
+	return a.getHandler(id).read(id)
+}
+
+func (a *SessionStore) Write(id string, data []byte) error {
+	return a.getHandler(id).write(id, data)
 }
 
 func (a *SessionStore) Delete(id string) error {
 	return a.getHandler(id).delete(id)
-}
-
-func (a *SessionStore) Read(id string) ([]byte, error) {
-	return a.getHandler(id).read(id)
 }
 
 func (a *SessionStore) Timestamp(id string) (*time.Time, error) {
@@ -134,10 +134,10 @@ func (a *SessionStore) getHandler(id string) *sessionHandler {
 	return a.handlerMap[id[0:1]]
 }
 
-func (a *SessionStore) newId() string {
+func (a *SessionStore) newName() string {
 	var word string
 
-	for i := 0; i < a.idSize; i++ {
+	for i := 0; i < a.cryptoStrength; i++ {
 		nBig, err := rand.Int(rand.Reader, big.NewInt(rndSize))
 		if err != nil {
 			panic(err)

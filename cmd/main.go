@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/divilla/gofss"
@@ -16,6 +15,7 @@ import (
 func main() {
 	// Echo instance
 	e := echo.New()
+	defer e.Close()
 
 	// Middleware
 	e.Use(middleware.RequestLogger()) // use the default RequestLogger middleware with slog logger
@@ -44,10 +44,8 @@ func main() {
 	data, err = ss.Read(id)
 	fmt.Println("read2", string(data), unixTime, err)
 
-	os.Exit(0)
-
 	data = []byte("Hello New World\n")
-	err = ss.Update(id, data)
+	err = ss.Write(id, data)
 	if err != nil {
 		panic(err)
 	}

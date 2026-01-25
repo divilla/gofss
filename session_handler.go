@@ -47,7 +47,7 @@ func (h *sessionHandler) create(id string, data []byte) error {
 	return nil
 }
 
-func (h *sessionHandler) update(id string, data []byte) error {
+func (h *sessionHandler) write(id string, data []byte) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
