@@ -20,48 +20,48 @@ var (
 type (
 	SessionStore struct {
 		handlerMap    map[string]*sessionHandler
-		hashSize      int
+		idSize        int
 		purgeInterval time.Duration
 	}
 
 	SessionStoreConfig struct {
 		SavePath       string
-		HashSize       int
+		IDSize         int
 		ExpireInterval time.Duration
 		PurgeInterval  time.Duration
 	}
 )
 
-func NewSessionStoreConfig() *SessionStoreConfig {
+func NewSessionStoreConfig() SessionStoreConfig {
 	workDir, _ := os.Getwd()
-	return &SessionStoreConfig{
+	return SessionStoreConfig{
 		SavePath:       filepath.Join(workDir, "sessions"),
-		HashSize:       8,
+		IDSize:         8,
 		ExpireInterval: time.Hour * 24 * 365,
 		PurgeInterval:  time.Hour * 24,
 	}
 }
 
-func NewSessionStore(config *SessionStoreConfig) (*SessionStore, error) {
-	fileInfo, err := os.Stat(config.SavePath)
+func NewSessionStore(cfg SessionStoreConfig) (*SessionStore, error) {
+	fileInfo, err := os.Stat(cfg.SavePath)
 	if errors.Is(err, fs.ErrNotExist) {
-		if err = os.Mkdir(config.SavePath, 0700); err != nil {
-			return nil, fmt.Errorf("mkdir: '%s' error: %w", config.SavePath, err)
+		if err = os.Mkdir(cfg.SavePath, 0700); err != nil {
+			return nil, fmt.Errorf("mkdir: '%s' error: %w", cfg.SavePath, err)
 		}
 	} else if err != nil {
-		slog.Error("creating session directory '%s' error: %w", config.SavePath, err)
+		slog.Error("creating session directory '%s' error: %w", cfg.SavePath, err)
 		return nil, err
 	} else if !fileInfo.IsDir() {
-		return nil, errors.New(fmt.Sprintf("ids savePath is not a directory: %s", config.SavePath))
+		return nil, errors.New(fmt.Sprintf("ids savePath is not a directory: %s", cfg.SavePath))
 	}
 
 	app := &SessionStore{
 		handlerMap:    make(map[string]*sessionHandler),
-		hashSize:      config.HashSize,
-		purgeInterval: config.PurgeInterval,
+		idSize:        cfg.IDSize,
+		purgeInterval: cfg.PurgeInterval,
 	}
 	for i := 0; i < len(URL64); i++ {
-		app.handlerMap[URL64[i:i+1]] = newSessionHandler(config)
+		app.handlerMap[URL64[i:i+1]] = newSessionHandler(cfg)
 	}
 
 	go app.purgeGoroutine()
@@ -97,9 +97,25 @@ func (a *SessionStore) Timestamp(id string) (*time.Time, error) {
 	return a.getHandler(id).timestamp(id)
 }
 
-func (a *SessionStore) PurgeExpired() error {
+func (a *SessionStore) Reset(id string) (string, error) {
+	var newID string
+
+	data, err := a.Read(id)
+	if err != nil {
+		return newID, err
+	}
+
+	err = a.Delete(id)
+	if err != nil {
+		return newID, err
+	}
+
+	return a.Create(data), nil
+}
+
+func (a *SessionStore) Purge() error {
 	for key, handler := range a.handlerMap {
-		if err := handler.purgeExpired(key); err != nil {
+		if err := handler.purge(key); err != nil {
 			return err
 		}
 	}
@@ -110,7 +126,7 @@ func (a *SessionStore) PurgeExpired() error {
 func (a *SessionStore) purgeGoroutine() {
 	for {
 		<-time.After(a.purgeInterval)
-		_ = a.PurgeExpired()
+		_ = a.Purge()
 	}
 }
 
@@ -121,7 +137,7 @@ func (a *SessionStore) getHandler(id string) *sessionHandler {
 func (a *SessionStore) newId() string {
 	var word string
 
-	for i := 0; i < a.hashSize; i++ {
+	for i := 0; i < a.idSize; i++ {
 		nBig, err := rand.Int(rand.Reader, big.NewInt(rndSize))
 		if err != nil {
 			panic(err)

@@ -12,10 +12,10 @@ $ go test -bench=. -benchmem
 goos: linux
 goarch: amd64
 pkg: github.com/divilla/gofss
-cpu: AMD Ryzen 7 7700X 8-Core Processor             
+cpu: 13th Gen Intel(R) Core(TM) i7-13650HX
 
-BenchmarkSessionCreate-16        77972       14400 ns/op       5481 B/op       115 allocs/op
-BenchmarkSessionRead-16         908493        1244 ns/op       1344 B/op         8 allocs/op
-BenchmarkSessionUpdate-16       101702       10107 ns/op        502 B/op         6 allocs/op
-BenchmarkSessionDelete-16        86104       12010 ns/op        414 B/op         5 allocs/op
+BenchmarkSessionCreate-20        87756      11413 ns/op        5600 B/op      115 allocs/op
+BenchmarkSessionRead-20        1426465        941.8 ns/op      1331 B/op        8 allocs/op
+BenchmarkSessionUpdate-20       123658      14473 ns/op         500 B/op        6 allocs/op
+BenchmarkSessionDelete-20        56817      17765 ns/op         393 B/op        4 allocs/op
 ```
